@@ -58,7 +58,7 @@ static void *worker_thread (void *param)
         thread->worker_function (thread->worker_job, thread);
 
 #ifdef DEBUG
-        if (thread->job_number < last_job)
+        if (A_BEFORE_B (thread->job_number, last_job))
             unordered++;
         else
             last_job = thread->job_number;
@@ -76,7 +76,7 @@ static void *worker_thread (void *param)
 // no future job will be allowed into this section until after this job has run to
 // completion). This is provided for applications that require that the results of the
 // work be handled in the order that the jobs are enqueued, including things like
-// updating global variables or writing the results to a file.
+// race-free updating of global variables or writing the results to a file.
 
 void workerSync (void *context)
 {
@@ -94,7 +94,7 @@ void workerSync (void *context)
         wkr_mutex_obtain (global->mutex);
 
         for (i = 0; i < global->num_workers; ++i)
-            while (global->workers [i].state == Running && global->workers [i].job_number < info->job_number)
+            while (global->workers [i].state == Running && A_BEFORE_B (global->workers [i].job_number, info->job_number))
                 wkr_condvar_wait (global->condvar, global->mutex);
 
         wkr_mutex_release (global->mutex);
@@ -248,7 +248,7 @@ Workers *workersInit (int numWorkerThreads)
 
 unsigned int workersEnqueueJob (Workers *cxt, int (*workerFunction)(void *, void *), void *workerJob, WorkerPolicy policy)
 {
-    unsigned int job_number;
+    uint32_t job_number;
     int i;
 
     // handle the unitialized numWorkers == zero case by simply executing the job and returning zero
@@ -283,7 +283,7 @@ unsigned int workersEnqueueJob (Workers *cxt, int (*workerFunction)(void *, void
             workerFunction (workerJob, cxt);
 
 #ifdef DEBUG
-            if (job_number < last_job)
+            if (A_BEFORE_B (job_number, last_job))
                 unordered++;
             else
                 last_job = job_number;
@@ -324,7 +324,7 @@ unsigned int workersEnqueueJob (Workers *cxt, int (*workerFunction)(void *, void
 // running on the user's thread (but of course that would indicate that multiple threads
 // were calling into the manager).
 
-int workersIsJobRunning (Workers *cxt, unsigned int jobNumber)
+int workersIsJobRunning (Workers *cxt, uint32_t jobNumber)
 {
     int retval = 0;
 
@@ -351,7 +351,7 @@ int workersIsJobRunning (Workers *cxt, unsigned int jobNumber)
 // specified one have also completed. Note that this will not apply to a job running on the user's
 // thread (but of course that would indicate that multiple threads were calling into the manager).
 
-void workersWaitOnJob (Workers *cxt, unsigned int jobNumber)
+void workersWaitOnJob (Workers *cxt, uint32_t jobNumber)
 {
     if (cxt) {
         int i;

@@ -21,10 +21,14 @@
 // Note that there are more advanced and more efficient methods for calculating
 // π(N), such as the Meissel-Lehmer method, but these are not implemented here.
 
+#ifdef __GNUC__
+#define __USE_MINGW_ANSI_STDIO 1
+#include <locale.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <locale.h>
 #include <stdio.h>
 #include <math.h>
 
@@ -51,17 +55,17 @@ static int prime_slice (void *context, void *worker);
 
 int main (int argc, char **argv)
 {
-    int max_base_prime, num_slices = 0, num_workers = 16;
+    int max_base_prime, num_slices = 0, num_workers = 4;
     uint64_t max_prime;
 
-#ifndef _WIN32
+#ifdef __GNUC__
     setlocale (LC_NUMERIC, "");
 #endif
 
     if (argc < 2) {
         printf ("\nusage: primes <max value> [num workers]\n");
-        printf ("note:  max value must be at least 10 and less than a quadrillion (1e15)\n");
-        printf ("note:  num workers can be from 0 (no threading) to 100 (default is 16)\n\n");
+        printf ("note:  max value must be at least 10 and no greater than a quadrillion (\"1e15\")\n");
+        printf ("note:  num workers can be from 0 (no threading) to 100 (default is 4)\n\n");
         return 0;
     }
 
@@ -119,19 +123,19 @@ int main (int argc, char **argv)
         }
 
     if (num_slices)
-#ifdef _WIN32
-        printf ("base primes: there are %d primes less than %d; the last is %d\n",
+#ifdef __GNUC__
+        printf ("base primes: there are %'d primes less than %'d; the last is %'d\n",
             (int) prime_count, max_base_prime, (int) last_prime);
 #else
-        printf ("base primes: there are %'d primes less than %'d; the last is %'d\n",
+        printf ("base primes: there are %d primes less than %d; the last is %d\n",
             (int) prime_count, max_base_prime, (int) last_prime);
 #endif
     else
-#ifdef _WIN32
-        printf ("there are %d primes less than %d; the last is %d\n",
+#ifdef __GNUC__
+        printf ("there are %'d primes less than %'d; the last is %'d\n",
             (int) prime_count, (int) max_prime, (int) last_prime);
 #else
-        printf ("there are %'d primes less than %'d; the last is %'d\n",
+        printf ("there are %d primes less than %d; the last is %d\n",
             (int) prime_count, (int) max_prime, (int) last_prime);
 #endif
 
@@ -169,8 +173,7 @@ int main (int argc, char **argv)
                 int percent = (slice * 100 + (num_slices / 2)) / num_slices;
 
                 if (percent != progress_percent) {
-                    fprintf (stderr, "\rprogress: %d%% ", progress_percent = percent);
-                    if (percent == 100) fprintf (stderr, "\n");
+                    fprintf (stderr, "\rprogress: %d%%%s", progress_percent = percent, percent == 100 ? " (done)\n" : " ");
                     fflush (stderr);
                 }
             }
@@ -183,11 +186,11 @@ int main (int argc, char **argv)
 
         // report the results
 
-#ifdef _WIN32
-        printf ("there are %llu primes less than %llu; the last is %llu\n", (unsigned long long) prime_count,
+#ifdef __GNUC__
+        printf ("there are %'llu primes less than %'llu; the last is %'llu\n", (unsigned long long) prime_count,
             (unsigned long long) max_prime, (unsigned long long) last_prime);
 #else
-        printf ("there are %'llu primes less than %'llu; the last is %'llu\n", (unsigned long long) prime_count,
+        printf ("there are %llu primes less than %llu; the last is %llu\n", (unsigned long long) prime_count,
             (unsigned long long) max_prime, (unsigned long long) last_prime);
 #endif
     }

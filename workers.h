@@ -12,6 +12,12 @@
 #define WORKERS_H
 
 #include <stdlib.h>
+#include <stdint.h>
+
+// these macros are to compare 32-bit unsigned job numbers (which can wrap)
+
+#define A_BEFORE_B(A,B) (((A)-(B)) & 0x80000000)
+#define A_AFTER_B(A,B) (((B)-(A)) & 0x80000000)
 
 // This implements portable multithreading via typedefs and macros for either
 // pthreads or native Windows threads. This is easy since the synchronization
@@ -101,7 +107,7 @@ typedef struct {
     wkr_condvar_t condvar;      // these individual condvars are signaled by the background thread when the worker
                                 // thread's "state" has been updated from "Ready" (either to "Running" or to "Quit")
     wkr_thread_t thread;        // this is the actual thread for the worker
-    unsigned int job_number;    // this is the incrementing, non-zero job number (used for synchronization)
+    uint32_t job_number;        // this is the 32-bit incrementing non-zero job number (used for synchronization)
     int (*worker_function)(void*,void*); // this is the user-supplied function to actually perform the work
     void *worker_job;           // this is the user-supplied (and -defined) pointer to the work "data"
 } WorkerInfo;
@@ -122,9 +128,9 @@ extern "C" {
 #endif
 
 Workers *workersInit (int numWorkerThreads);
-unsigned int workersEnqueueJob (Workers *cxt, int (*workerFunction)(void*,void*), void *WorkerJob, WorkerPolicy policy);
-void workersWaitOnJob (Workers *cxt, unsigned int jobNumber);
-int workersIsJobRunning (Workers *cxt, unsigned int jobNumber);
+uint32_t workersEnqueueJob (Workers *cxt, int (*workerFunction)(void*,void*), void *WorkerJob, WorkerPolicy policy);
+void workersWaitOnJob (Workers *cxt, uint32_t jobNumber);
+int workersIsJobRunning (Workers *cxt, uint32_t jobNumber);
 int workersNumAvailableWorkers (Workers *cxt);
 int workersNumRunningJobs (Workers *cxt);
 void workersWaitAllJobs (Workers *cxt);
